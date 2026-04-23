@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { 
   Scan, 
   Hand, 
+  PenTool,
   LogOut, 
   Shield, 
   Menu,
@@ -19,6 +20,7 @@ export default function Header() {
     { id: 'landing', label: 'Home', icon: Shield },
     { id: 'faceauth', label: 'Face Auth', icon: Scan },
     { id: 'gesture', label: 'Gestures', icon: Hand },
+    { id: 'airdraw', label: 'Air Draw', icon: PenTool },
   ]
 
   if (isAuthenticated) {

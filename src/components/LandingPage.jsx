@@ -2,7 +2,8 @@ import { useAppContext } from '../App'
 import { motion } from 'framer-motion'
 import { 
   Scan, 
-  Hand, 
+  Hand,
+  PenTool,
   Shield, 
   Zap, 
   Lock, 
@@ -30,6 +31,13 @@ const features = [
     description: 'MediaPipe hand tracking with real-time 21-landmark detection for intuitive gesture-based system control.',
     color: 'purple',
     gradient: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.08))',
+  },
+  {
+    icon: PenTool,
+    title: 'Air Drawing',
+    description: 'Use your index finger to sketch neon artwork in 3D space. Creates beautiful patterns with zero-latency canvas rendering.',
+    color: 'pink',
+    gradient: 'linear-gradient(135deg, rgba(236,72,153,0.15), rgba(0,212,255,0.08))',
   },
   {
     icon: Lock,
@@ -266,9 +274,9 @@ export default function LandingPage() {
           viewport={{ once: true }}
         >
           {[
-            { num: '01', title: 'Register Face', desc: 'Look at your camera to capture facial features. The AI creates a unique 128-dim embedding.', icon: Fingerprint },
+            { num: '01', title: 'Register Face', desc: 'Look at your camera to capture facial features. The AI creates a unique embedding.', icon: Fingerprint },
             { num: '02', title: 'Authenticate', desc: 'Log in by presenting your face. Real-time matching against stored embeddings.', icon: Shield },
-            { num: '03', title: 'Gesture Control', desc: 'Use hand gestures to control music, brightness, volume, and system actions.', icon: Hand },
+            { num: '03', title: 'Gesture & Draw', desc: 'Control the system with hand signs, or use Air Drawing to create artwork mid-air.', icon: Hand },
           ].map((step, i) => (
             <motion.div key={i} className="step-card" variants={itemVariants}>
               <div className="step-num">{step.num}</div>

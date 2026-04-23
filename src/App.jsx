@@ -4,6 +4,7 @@ import Header from './components/Header'
 import LandingPage from './components/LandingPage'
 import FaceAuth from './components/FaceAuth'
 import GestureControl from './components/GestureControl'
+import AirDrawing from './components/AirDrawing'
 import Dashboard from './components/Dashboard'
 import './App.css'
 
@@ -83,6 +84,12 @@ function App() {
         return (
           <motion.div key="gesture" {...pageVariants}>
             <GestureControl />
+          </motion.div>
+        )
+      case 'airdraw':
+        return (
+          <motion.div key="airdraw" {...pageVariants}>
+            <AirDrawing />
           </motion.div>
         )
       case 'dashboard':
