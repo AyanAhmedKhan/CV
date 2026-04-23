@@ -46,6 +46,22 @@ export default function FaceAuth() {
   const [matchResult, setMatchResult] = useState(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
+  const faceMatcherRef = useRef(null)
+
+  useEffect(() => {
+    if (registeredFaces.length > 0) {
+      const labeledDescriptors = registeredFaces.map(f =>
+        new faceapi.LabeledFaceDescriptors(
+          f.name,
+          [new Float32Array(f.descriptor)]
+        )
+      )
+      faceMatcherRef.current = new faceapi.FaceMatcher(labeledDescriptors, 0.5)
+    } else {
+      faceMatcherRef.current = null
+    }
+  }, [registeredFaces])
+
   // Load face-api models
   const loadModels = async () => {
     if (modelsLoaded) return
@@ -164,11 +180,17 @@ export default function FaceAuth() {
           ctx.fill()
         })
 
-        // Detection score
+        // Detection score and name
+        let label = 'Unknown'
+        if (faceMatcherRef.current) {
+          const match = faceMatcherRef.current.findBestMatch(det.descriptor)
+          label = match.label !== 'unknown' ? match.label : 'Unknown'
+        }
+
         ctx.fillStyle = '#00d4ff'
-        ctx.font = '12px Inter'
+        ctx.font = '14px Inter'
         ctx.fillText(
-          `${(det.detection.score * 100).toFixed(1)}%`,
+          `${label} - ${(det.detection.score * 100).toFixed(1)}%`,
           box.x,
           box.y - 8
         )
