@@ -28,6 +28,8 @@ export default function AirDrawing() {
   const [cameraOn, setCameraOn] = useState(false)
   const [isDrawingMode, setIsDrawingMode] = useState(false)
   const [colorIndex, setColorIndex] = useState(0)
+  const [brushSize, setBrushSize] = useState(6)
+  const [isEraser, setIsEraser] = useState(false)
 
   // Neon colors for drawing
   const colors = [
@@ -82,13 +84,21 @@ export default function AirDrawing() {
       ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y)
       ctx.lineTo(x, y)
       
-      // Neon Glow effect
-      ctx.strokeStyle = currentColor
-      ctx.lineWidth = 6
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
-      ctx.shadowBlur = 15
-      ctx.shadowColor = currentColor
+      
+      if (isEraser) {
+        ctx.globalCompositeOperation = 'destination-out'
+        ctx.lineWidth = brushSize * 4
+        ctx.shadowBlur = 0
+        ctx.strokeStyle = 'rgba(0,0,0,1)'
+      } else {
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.strokeStyle = currentColor
+        ctx.lineWidth = brushSize
+        ctx.shadowBlur = 15
+        ctx.shadowColor = currentColor
+      }
       
       ctx.stroke()
     }
@@ -131,33 +141,36 @@ export default function AirDrawing() {
           radius: 2
         })
 
-        // Check gesture
-        let currentGesture = 'None'
-        if (results.gestures && results.gestures.length > 0) {
-          currentGesture = results.gestures[0][0].categoryName
-        }
-
-        // We consider "Pointing_Up" as drawing mode
-        if (currentGesture === 'Pointing_Up') {
+        // Pinch detection for drawing
+        const thumbTip = landmarks[4]
+        const indexTip = landmarks[8]
+        
+        const dx = thumbTip.x - indexTip.x
+        const dy = thumbTip.y - indexTip.y
+        const distance = Math.sqrt(dx * dx + dy * dy)
+        
+        // Pinch distance threshold (approx 0.05 normalized distance)
+        if (distance < 0.06) {
           drawingActive = true
         }
 
         setIsDrawingMode(drawingActive)
 
-        // Get index finger tip (landmark 8)
-        const indexTip = landmarks[8]
+        // Midpoint of pinch
+        const midX = (thumbTip.x + indexTip.x) / 2
+        const midY = (thumbTip.y + indexTip.y) / 2
         
         // Convert normalized coordinates to canvas coordinates
         // Note: Canvas is flipped horizontally via CSS, so we flip the X coordinate here
-        const x = (1 - indexTip.x) * drawCanvas.width
-        const y = indexTip.y * drawCanvas.height
+        const x = (1 - midX) * drawCanvas.width
+        const y = midY * drawCanvas.height
 
         // Draw cursor on overlay
         overlayCtx.beginPath()
-        overlayCtx.arc(1 - indexTip.x * overlayCanvas.width, indexTip.y * overlayCanvas.height, 8, 0, 2 * Math.PI)
-        overlayCtx.fillStyle = drawingActive ? colors[colorIndex] : 'rgba(255,255,255,0.5)'
+        overlayCtx.arc((1 - midX) * overlayCanvas.width, midY * overlayCanvas.height, isEraser ? brushSize * 2 : Math.max(8, brushSize), 0, 2 * Math.PI)
+        overlayCtx.fillStyle = drawingActive ? (isEraser ? 'rgba(255,255,255,0.8)' : colors[colorIndex]) : 'rgba(255,255,255,0.5)'
         overlayCtx.fill()
-        if (drawingActive) {
+        if (drawingActive && !isEraser) {
           overlayCtx.shadowBlur = 20
           overlayCtx.shadowColor = colors[colorIndex]
         }
@@ -175,7 +188,7 @@ export default function AirDrawing() {
     if (cameraOn) {
       requestRef.current = requestAnimationFrame(processFrame)
     }
-  }, [cameraOn, colorIndex, colors])
+  }, [cameraOn, colorIndex, colors, brushSize, isEraser])
 
   // Camera Management
   const startCamera = async () => {
@@ -279,7 +292,7 @@ export default function AirDrawing() {
         <div className="airdrawing-header">
           <div>
             <h1>Air Drawing Studio</h1>
-            <p>Use your index finger to draw in mid-air. The neural network tracks your hand in 3D space.</p>
+            <p>Pinch your thumb and index finger to draw in mid-air. Tracked by neural network in real-time.</p>
           </div>
           <div className="controls-row">
             {!ready ? (
@@ -335,7 +348,7 @@ export default function AirDrawing() {
               <div className="drawing-hud">
                 <div className={`status-badge ${isDrawingMode ? 'active' : ''}`}>
                   <span className="status-dot"></span>
-                  {isDrawingMode ? 'Drawing...' : 'Hovering (Point index finger up to draw)'}
+                  {isDrawingMode ? (isEraser ? 'Erasing...' : 'Drawing...') : 'Hovering (Pinch thumb & index to draw)'}
                 </div>
               </div>
             )}
@@ -343,17 +356,42 @@ export default function AirDrawing() {
 
           {/* Tools Panel */}
           <div className="tools-panel">
-            <div className="tools-group">
-              <span className="tools-label"><Palette size={16}/> Select Color</span>
-              <div className="color-picker">
-                {colors.map((color, idx) => (
+            <div className="tools-top-row">
+              <div className="tools-group">
+                <span className="tools-label"><Palette size={16}/> Tools</span>
+                <div className="color-picker">
+                  {colors.map((color, idx) => (
+                    <button
+                      key={idx}
+                      className={`color-btn ${colorIndex === idx && !isEraser ? 'active' : ''}`}
+                      style={{ backgroundColor: color, boxShadow: colorIndex === idx && !isEraser ? `0 0 15px ${color}` : 'none' }}
+                      onClick={() => {
+                        setColorIndex(idx)
+                        setIsEraser(false)
+                      }}
+                      title="Brush Color"
+                    />
+                  ))}
                   <button
-                    key={idx}
-                    className={`color-btn ${colorIndex === idx ? 'active' : ''}`}
-                    style={{ backgroundColor: color, boxShadow: colorIndex === idx ? `0 0 15px ${color}` : 'none' }}
-                    onClick={() => setColorIndex(idx)}
-                  />
-                ))}
+                    className={`tool-btn ${isEraser ? 'active' : ''}`}
+                    onClick={() => setIsEraser(true)}
+                    title="Eraser"
+                  >
+                    <div className="eraser-icon" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="tools-group size-group">
+                <span className="tools-label">Size: {brushSize}px</span>
+                <input 
+                  type="range" 
+                  min="2" 
+                  max="20" 
+                  value={brushSize} 
+                  onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                  className="size-slider"
+                />
               </div>
             </div>
 
@@ -364,7 +402,7 @@ export default function AirDrawing() {
                 disabled={!cameraOn}
               >
                 <Trash2 size={16} />
-                <span>Clear Canvas</span>
+                <span>Clear</span>
               </button>
               <button 
                 className="btn btn-primary" 
@@ -372,7 +410,7 @@ export default function AirDrawing() {
                 disabled={!cameraOn}
               >
                 <Download size={16} />
-                <span>Save Artwork</span>
+                <span>Save</span>
               </button>
             </div>
           </div>
